@@ -2,14 +2,14 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const Interaction = require('../models/Interaction');
-const Medication = require('../models/Medication'); // ✅ Import necessário
+const Medication = require('../models/Medication');
 
 // 🔍 Verifica interações entre medicamentos por nome
 router.post('/check', auth, async (req, res) => {
     const { medicationNames } = req.body;
 
     if (!Array.isArray(medicationNames) || medicationNames.length < 2) {
-        return res.status(400).json({ hasInteraction: false, warnings: [] });
+        return res.json({ hasInteraction: false, warnings: [] });
     }
 
     try {
@@ -40,7 +40,7 @@ router.post('/check', auth, async (req, res) => {
             warnings
         });
     } catch (err) {
-        console.error('Erro ao verificar interações:', err.message);
+        console.error('Erro ao verificar interações por nome:', err.message);
         res.status(500).send('Erro no servidor ao verificar interações.');
     }
 });

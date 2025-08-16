@@ -1,36 +1,36 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-const InteractionSchema = new Schema({
-  medications: {
-    type: [String],
-    required: false,
+// Este schema representa um medicamento individual no sistema
+const MedicationSchema = new Schema({
+  // Nome do medicamento (único e obrigatório)
+  name: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
   },
-  warning: {
+
+  // (Opcional) Categoria ou classe do medicamento
+  category: {
     type: String,
     required: false,
   },
-  tipo: {
-    type: String,
-    enum: ['Adicionou remédio', 'Removeu aviso', 'Verificou interação', 'Outro'],
-    required: false,
-  },
-  descricao: {
+
+  // (Opcional) Informações adicionais sobre o medicamento
+  description: {
     type: String,
     required: false,
   },
-  user: {
-    type: Schema.Types.ObjectId,
-    ref: 'users',
-    required: false,
-  },
-  data: {
+
+  // Data de criação automática
+  createdAt: {
     type: Date,
     default: Date.now,
   }
 });
 
-// Index para melhorar performance em buscas por medicamentos
-InteractionSchema.index({ medications: 1 });
+// 🔍 Index para facilitar buscas por nome
+MedicationSchema.index({ name: 1 });
 
-module.exports = mongoose.model('Interaction', InteractionSchema);
+module.exports = mongoose.model('Medication', MedicationSchema);
