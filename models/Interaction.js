@@ -34,3 +34,5 @@ const MedicationSchema = new Schema({
 MedicationSchema.index({ name: 1 });
 
 module.exports = mongoose.model('Medication', MedicationSchema);
+
+// oi
