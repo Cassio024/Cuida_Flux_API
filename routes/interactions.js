@@ -30,7 +30,7 @@ router.post('/check', auth, async (req, res) => {
                 medications: { $all: [med1Regex, med2Regex] }
             });
 
-            if (interaction && !warnings.includes(interaction.warning)) {
+            if (interaction && interaction.warning && !warnings.includes(interaction.warning)) {
                 warnings.push(interaction.warning);
             }
         }
@@ -70,7 +70,7 @@ router.post('/', auth, async (req, res) => {
                     }
                 });
 
-                if (interaction && !interactionsFound.includes(interaction.warning)) {
+                if (interaction && interaction.warning && !interactionsFound.includes(interaction.warning)) {
                     interactionsFound.push(interaction.warning);
                 }
             }
