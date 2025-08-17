@@ -1,14 +1,11 @@
-// ARQUIVO CORRIGIDO E FINAL: routes/medications.js
-
+// Arquivo: routes/medications.js
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const { check, validationResult } = require('express-validator');
 const Medication = require('../models/Medication');
 
-// @route   GET api/medications
-// @desc    Obter os medicamentos do utilizador logado
-// @access  Private
+// Rota GET (sem alterações)
 router.get('/', auth, async (req, res) => {
     try {
         const medications = await Medication.find({ user: req.user.id }).sort({ date: -1 });
@@ -18,6 +15,25 @@ router.get('/', auth, async (req, res) => {
         res.status(500).send('Erro no servidor');
     }
 });
+
+// --- NOVA ROTA PARA BUSCAR POR QR CODE ---
+// @route   GET api/medications/qr/:identifier
+// @desc    Obter um medicamento pelo seu QR Code customizado
+// @access  Private
+router.get('/qr/:identifier', auth, async (req, res) => {
+    try {
+        const medication = await Medication.findOne({ qrCodeIdentifier: req.params.identifier, user: req.user.id });
+        if (!medication) {
+            return res.status(404).json({ msg: 'Medicamento não encontrado para este QR Code.' });
+        }
+        res.json(medication);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Erro no Servidor');
+    }
+});
+// --- FIM DA NOVA ROTA ---
+
 
 // @route   POST api/medications
 // @desc    Adicionar um novo medicamento
@@ -34,12 +50,15 @@ router.post('/', [
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
-    const { name, dosage, schedules } = req.body;
+    // CAMPOS NOVOS ADICIONADOS AQUI
+    const { name, dosage, schedules, expirationDate, qrCodeIdentifier } = req.body;
     try {
         const newMedication = new Medication({
             name,
             dosage,
             schedules,
+            expirationDate, // Salva a data de validade
+            qrCodeIdentifier, // Salva o identificador do QR Code
             user: req.user.id,
         });
         const medication = await newMedication.save();
@@ -54,11 +73,16 @@ router.post('/', [
 // @desc    Atualizar um medicamento
 // @access  Private
 router.put('/:id', auth, async (req, res) => {
-    const { name, dosage, schedules } = req.body;
+    // CAMPOS NOVOS ADICIONADOS AQUI
+    const { name, dosage, schedules, expirationDate, qrCodeIdentifier } = req.body;
+    
     const medicationFields = {};
     if (name) medicationFields.name = name;
     if (dosage) medicationFields.dosage = dosage;
     if (schedules) medicationFields.schedules = schedules;
+    if (expirationDate) medicationFields.expirationDate = expirationDate; // Atualiza a data de validade
+    if (qrCodeIdentifier) medicationFields.qrCodeIdentifier = qrCodeIdentifier; // Atualiza o QR Code
+
     try {
         let medication = await Medication.findById(req.params.id);
         if (!medication) return res.status(404).json({ msg: 'Medicamento não encontrado' });
@@ -77,9 +101,7 @@ router.put('/:id', auth, async (req, res) => {
     }
 });
 
-// @route   DELETE api/medications/:id
-// @desc    Apagar um medicamento
-// @access  Private
+// Rota DELETE (sem alterações)
 router.delete('/:id', auth, async (req, res) => {
     try {
         let medication = await Medication.findById(req.params.id);
@@ -96,5 +118,3 @@ router.delete('/:id', auth, async (req, res) => {
 });
 
 module.exports = router;
-
-// oi

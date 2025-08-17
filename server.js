@@ -10,13 +10,12 @@ connectDB();
 
 const app = express();
 
-// 🔐 CORS configurado para produção (Firebase) e desenvolvimento local
+// CORS (sem alterações)
 app.use(cors({
   origin: function (origin, callback) {
     const allowedOrigins = [
       'https://vitalog-ac0ba.web.app' // produção
     ];
-
     if (!origin || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
       callback(null, true);
     } else if (allowedOrigins.includes(origin)) {
@@ -39,12 +38,12 @@ app.get('/', (req, res) => res.send('API VitaLog está a funcionar!'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/medications', require('./routes/medications'));
 app.use('/api/interactions', require('./routes/interactions'));
-app.use('/api/relatorio', require('./routes/relatorio')); // ✅ Nova rota
 app.use('/', require('./routes/chatbot'));
 
+// --- NOVA ROTA REGISTRADA ---
+app.use('/api/barcode', require('./routes/barcode'));
+// --- FIM DA NOVA ROTA ---
 
 // Porta
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
-
-// oi
