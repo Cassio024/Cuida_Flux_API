@@ -12,11 +12,19 @@ const app = express();
 
 // 🔐 CORS configurado para produção (Firebase) e desenvolvimento local
 app.use(cors({
-  origin: [
-    'http://localhost:3000',               // acesso local (notebook)
-    'http://127.0.0.1:3000',               // alternativa local
-    'https://vitalog-ac0ba.web.app'        // frontend em produção (Firebase Hosting)
-  ],
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'https://vitalog-ac0ba.web.app' // produção
+    ];
+
+    if (!origin || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+      callback(null, true);
+    } else if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
@@ -32,6 +40,9 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/medications', require('./routes/medications'));
 app.use('/api/interactions', require('./routes/interactions'));
 app.use('/', require('./routes/chatbot'));
+
+// ✅ Rota de alarmes
+app.use('/api/alarms', require('./routes/alarms'));
 
 // Porta
 const PORT = process.env.PORT || 5000;
