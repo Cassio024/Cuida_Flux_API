@@ -1,27 +1,36 @@
-// ARQUIVO NOVO: models/Interaction.js
-
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-// Este schema descreve a estrutura de um documento na sua coleção de interações,
-// exatamente como vimos na captura de tela do seu banco de dados.
-const InteractionSchema = new Schema({
-  // Uma lista com os nomes dos medicamentos que interagem
-  medications: {
-    type: [String],
-    required: true,
-  },
-  // A mensagem de aviso para essa interação específica
-  warning: {
+// Este schema representa um medicamento individual no sistema
+const MedicationSchema = new Schema({
+  // Nome do medicamento (único e obrigatório)
+  name: {
     type: String,
     required: true,
+    unique: true,
+    trim: true,
   },
-  // (Opcional, mas boa prática) Para ligar a interação a um usuário, se aplicável.
-  // Pode remover este campo se não for usar.
-  user: {
-    type: Schema.Types.ObjectId,
-    ref: 'users',
+
+  // (Opcional) Categoria ou classe do medicamento
+  category: {
+    type: String,
+    required: false,
+  },
+
+  // (Opcional) Informações adicionais sobre o medicamento
+  description: {
+    type: String,
+    required: false,
+  },
+
+  // Data de criação automática
+  createdAt: {
+    type: Date,
+    default: Date.now,
   }
 });
 
-module.exports = mongoose.model('interaction', InteractionSchema);
+// 🔍 Index para facilitar buscas por nome
+MedicationSchema.index({ name: 1 });
+
+module.exports = mongoose.model('Medication', MedicationSchema);

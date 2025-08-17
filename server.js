@@ -17,7 +17,6 @@ app.use(cors({
       'https://vitalog-ac0ba.web.app' // produção
     ];
 
-    // Permitir qualquer origem local (localhost ou 127.0.0.1)
     if (!origin || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
       callback(null, true);
     } else if (allowedOrigins.includes(origin)) {
@@ -40,7 +39,9 @@ app.get('/', (req, res) => res.send('API VitaLog está a funcionar!'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/medications', require('./routes/medications'));
 app.use('/api/interactions', require('./routes/interactions'));
+app.use('/api/relatorio', require('./routes/relatorio')); // ✅ Nova rota
 app.use('/', require('./routes/chatbot'));
+
 
 // Porta
 const PORT = process.env.PORT || 5000;
