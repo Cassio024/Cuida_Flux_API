@@ -1,3 +1,5 @@
+// Arquivo: routes/interactions.js
+
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
@@ -13,16 +15,24 @@ router.post('/check', auth, async (req, res) => {
     }
 
     try {
+        // --- MUDANÇA CRUCIAL AQUI ---
+        // Normaliza a lista de nomes recebida do aplicativo.
+        const cleanMedNames = medicationNames.map(name => 
+            name.trim().toLowerCase().split(' ')[0]
+        );
+
+        // Gera os pares usando a lista de nomes já limpa.
         const pairs = [];
-        for (let i = 0; i < medicationNames.length; i++) {
-            for (let j = i + 1; j < medicationNames.length; j++) {
-                pairs.push([medicationNames[i], medicationNames[j]]);
+        for (let i = 0; i < cleanMedNames.length; i++) {
+            for (let j = i + 1; j < cleanMedNames.length; j++) {
+                pairs.push([cleanMedNames[i], cleanMedNames[j]]);
             }
         }
 
         const warnings = [];
 
         for (const [med1, med2] of pairs) {
+            // A busca agora usa os nomes limpos, então a chance de encontrar é muito maior.
             const med1Regex = new RegExp(`^${med1}$`, 'i');
             const med2Regex = new RegExp(`^${med2}$`, 'i');
 
@@ -55,6 +65,7 @@ router.post('/', auth, async (req, res) => {
 
     try {
         const medications = await Medication.find({ _id: { $in: medicationIds } });
+        // A normalização já acontece aqui, o que é ótimo!
         const medNames = medications.map(m => m.name.toLowerCase());
 
         const interactionsFound = [];
@@ -64,8 +75,8 @@ router.post('/', auth, async (req, res) => {
                 const interaction = await Interaction.findOne({
                     medications: {
                         $all: [
-                            new RegExp(`^${medNames[i]}$`, 'i'),
-                            new RegExp(`^${medNames[j]}$`, 'i')
+                            new RegExp(`^${medNames[i].split(' ')[0]}$`, 'i'), // Adicionado split para segurança
+                            new RegExp(`^${medNames[j].split(' ')[0]}$`, 'i')  // Adicionado split para segurança
                         ]
                     }
                 });
@@ -75,13 +86,18 @@ router.post('/', auth, async (req, res) => {
                 }
             }
         }
-
-        res.status(200).json({ interactions: interactionsFound });
+        
+        // A resposta aqui é diferente da rota /check, vamos padronizar
+        res.status(200).json({
+            hasInteraction: interactionsFound.length > 0,
+            warnings: interactionsFound
+        });
     } catch (err) {
         console.error('Erro ao verificar interações por ID:', err.message);
         res.status(500).json({ error: 'Erro interno ao verificar interações por ID.' });
     }
 });
+
 
 // 📝 Registra qualquer tipo de interação do usuário
 router.post('/registrar', auth, async (req, res) => {
@@ -104,5 +120,3 @@ router.post('/registrar', auth, async (req, res) => {
 });
 
 module.exports = router;
-
-// oi
