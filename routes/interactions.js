@@ -2,12 +2,12 @@
 
 const express = require('express');
 const router = express.Router();
-const axios = require('axios'); // <-- ADICIONADO: Para fazer chamadas à API externa
+// const axios = require('axios'); // <-- REMOVIDO: Não precisamos mais de chamadas externas
 const auth = require('../middleware/auth');
-const Interaction = require('../models/Interaction'); // Mantido para a rota /registrar
-const Medication = require('../models/Medication');   // Mantido para a rota /
+const Interaction = require('../models/Interaction');
+const Medication = require('../models/Medication');
 
-// 🔍 Verifica interações entre medicamentos por nome (LÓGICA ATUALIZADA)
+// 🔍 Verifica interações entre medicamentos por nome (LÓGICA CORRIGIDA PARA USAR O BANCO DE DADOS LOCAL)
 router.post('/check', auth, async (req, res) => {
     const { medicationNames } = req.body;
 
@@ -16,44 +16,40 @@ router.post('/check', auth, async (req, res) => {
     }
 
     try {
-        // --- INÍCIO DA LÓGICA MODIFICADA ---
+        // --- INÍCIO DA LÓGICA ATUALIZADA ---
 
-        // 1. Converter nomes de medicamentos para códigos RxCUI (usados pela API)
-        const drugCodes = [];
-        for (const name of medicationNames) {
-            // Remove informações de dosagem para melhorar a busca (ex: "Paracetamol 500mg" -> "Paracetamol")
-            const cleanName = name.split(' ')[0];
-            const rxcuiResponse = await axios.get(`https://rxnav.nlm.nih.gov/REST/rxcui.json?name=${encodeURIComponent(cleanName)}`);
-            
-            if (rxcuiResponse.data.idGroup.rxnormId) {
-                drugCodes.push(rxcuiResponse.data.idGroup.rxnormId[0]);
+        // 1. Gera todas as combinações de pares de medicamentos a partir da lista recebida
+        const pairs = [];
+        for (let i = 0; i < medicationNames.length; i++) {
+            for (let j = i + 1; j < medicationNames.length; j++) {
+                // Limpa os nomes (remove dosagem, etc.) e converte para minúsculas para uma busca mais confiável
+                const cleanMed1 = medicationNames[i].split(' ')[0].toLowerCase();
+                const cleanMed2 = medicationNames[j].split(' ')[0].toLowerCase();
+                pairs.push([cleanMed1, cleanMed2]);
             }
         }
 
-        if (drugCodes.length < 2) {
-            return res.json({ hasInteraction: false, warnings: [] });
-        }
-
-        // 2. Verificar interações usando os códigos obtidos
-        const codesString = drugCodes.join('+');
-        const interactionResponse = await axios.get(`https://rxnav.nlm.nih.gov/REST/interaction/list.json?rxcuis=${codesString}`);
-
-        const interactionGroups = interactionResponse.data.fullInteractionTypeGroup;
         const warnings = [];
 
-        if (interactionGroups) {
-            interactionGroups.forEach(group => {
-                group.fullInteractionType.forEach(interactionType => {
-                    interactionType.interactionPair.forEach(pair => {
-                        if (!warnings.includes(pair.description)) {
-                            warnings.push(pair.description);
-                        }
-                    });
-                });
+        // 2. Para cada par, consulta o banco de dados para ver se existe uma interação registrada
+        for (const [med1, med2] of pairs) {
+            // Cria "Expressões Regulares" para garantir que a busca não diferencie maiúsculas de minúsculas
+            // Ex: "Paracetamol" no app vai encontrar "paracetamol" no banco de dados
+            const med1Regex = new RegExp(`^${med1}$`, 'i');
+            const med2Regex = new RegExp(`^${med2}$`, 'i');
+
+            // Procura por um documento na coleção 'interactions' que contenha AMBOS os medicamentos
+            const interaction = await Interaction.findOne({
+                medications: { $all: [med1Regex, med2Regex] }
             });
+
+            // 3. Se uma interação for encontrada, adiciona o aviso à lista de resultados
+            if (interaction && interaction.warning && !warnings.includes(interaction.warning)) {
+                warnings.push(interaction.warning);
+            }
         }
         
-        // --- FIM DA LÓGICA MODIFICADA ---
+        // --- FIM DA LÓGICA ATUALIZADA ---
 
         // A resposta mantém o formato que o seu app Flutter espera
         res.json({
@@ -61,15 +57,14 @@ router.post('/check', auth, async (req, res) => {
             warnings
         });
     } catch (err) {
-        console.error('Erro ao verificar interações com a API externa:', err.message);
-        // Em caso de erro na API externa, retorne sem interação para não bloquear o usuário
-        res.status(200).json({ hasInteraction: false, warnings: [] });
+        console.error('Erro ao verificar interações no banco de dados local:', err.message);
+        res.status(500).send('Erro no servidor ao verificar interações.');
     }
 });
 
-// ✅ Verifica interações entre medicamentos por ID (LÓGICA ATUALIZADA)
+// ✅ Verifica interações entre medicamentos por ID (NÃO MODIFICADO)
+// Esta rota continuará funcionando, pois ela chama a lógica de '/check' que acabamos de corrigir.
 router.post('/', auth, async (req, res) => {
-    // Esta rota agora reaproveita a lógica da rota /check
     const { medicationIds } = req.body;
 
     if (!Array.isArray(medicationIds) || medicationIds.length < 2) {
@@ -80,20 +75,13 @@ router.post('/', auth, async (req, res) => {
         const medications = await Medication.find({ _id: { $in: medicationIds } });
         const medNames = medications.map(m => m.name);
 
-        // Criar uma requisição "fake" para chamar a lógica de /check internamente
-        const fakeReq = {
-            body: { medicationNames: medNames }
-        };
-        
-        const fakeRes = {
-            // Criamos uma função json "fake" que nos permitirá capturar a resposta
-            json: (data) => {
-                res.status(200).json(data);
-            }
-        };
+        const fakeReq = { body: { medicationNames: medNames } };
+        const fakeRes = { json: (data) => { res.status(200).json(data); } };
 
-        // Chamar a função da rota /check diretamente
-        await router.stack.find(layer => layer.route.path === '/check').route.stack[0].handle(fakeReq, fakeRes);
+        // Chama a função da rota /check diretamente
+        // Acessa o manipulador da rota para reutilizar a lógica
+        const checkRouteHandler = router.stack.find(layer => layer.route && layer.route.path === '/check' && layer.route.methods.post).route.stack[0].handle;
+        await checkRouteHandler(fakeReq, fakeRes);
 
     } catch (err) {
         console.error('Erro ao buscar medicamentos por ID:', err.message);
