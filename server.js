@@ -10,12 +10,15 @@ connectDB();
 
 const app = express();
 
-// 🔐 CORS configurado para produção (Firebase) e desenvolvimento local
+// CORS (sem alterações)
 app.use(cors({
   origin: function (origin, callback) {
     const allowedOrigins = [
       'https://vitalog-ac0ba.web.app' // produção
     ];
+
+
+
 
     if (!origin || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
       callback(null, true);
@@ -41,8 +44,14 @@ app.use('/api/medications', require('./routes/medications'));
 app.use('/api/interactions', require('./routes/interactions'));
 app.use('/', require('./routes/chatbot'));
 
+
 // ✅ Rota de alarmes
 app.use('/api/alarms', require('./routes/alarms'));
+=======
+// --- NOVA ROTA REGISTRADA ---
+app.use('/api/barcode', require('./routes/barcode'));
+// --- FIM DA NOVA ROTA ---
+
 
 // Porta
 const PORT = process.env.PORT || 5000;
