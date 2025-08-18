@@ -10,27 +10,18 @@ connectDB();
 
 const app = express();
 
-// CORS (sem alterações)
+// --- INÍCIO DA ATUALIZAÇÃO NECESSÁRIA ---
+// CORS configurado de forma mais simples e direta
 app.use(cors({
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      'https://vitalog-ac0ba.web.app' // produção
-    ];
-
-
-
-
-    if (!origin || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
-      callback(null, true);
-    } else if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
+    origin: [
+        'https://vitalog-ac0ba.web.app', // URL do seu app em produção
+        /http:\/\/localhost:\d+/,      // Expressão regular para permitir qualquer porta em localhost
+        /http:\/\/127\.0\.0\.1:\d+/      // Expressão regular para permitir qualquer porta em 127.0.0.1
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
 }));
+// --- FIM DA ATUALIZAÇÃO ---
 
 // Middleware para interpretar JSON
 app.use(express.json({ extended: false }));
