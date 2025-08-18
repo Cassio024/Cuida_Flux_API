@@ -105,4 +105,3 @@ router.post('/registrar', auth, async (req, res) => {
 
 module.exports = router;
 
-// oi
