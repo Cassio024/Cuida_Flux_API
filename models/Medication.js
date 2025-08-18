@@ -36,4 +36,4 @@ const MedicationSchema = new mongoose.Schema({
   // --- FIM DOS NOVOS CAMPOS ---
 });
 
-module.exports = mongoose.model('medication', MedicationSchema);
+module.exports = mongoose.model('medications', MedicationsSchema);

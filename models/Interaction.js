@@ -33,6 +33,6 @@ const MedicationSchema = new Schema({
 // 🔍 Index para facilitar buscas por nome
 MedicationSchema.index({ name: 1 });
 
-module.exports = mongoose.model('Medication', MedicationSchema);
+module.exports = mongoose.model('Medications', MedicationsSchema);
 
 // oi
