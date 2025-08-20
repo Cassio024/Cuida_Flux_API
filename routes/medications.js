@@ -65,7 +65,7 @@ router.post('/', [
 // @route   PUT api/medications/:id
 // @desc    Atualizar um medicamento
 // @access  Private
-// --- LÓGICA DE ATUALIZAÇÃO MELHORADA ---
+// --- LÓGICA DE ATUALIZAÇÃO CORRIGIDA E MAIS FIÁVEL ---
 router.put('/:id', auth, async (req, res) => {
     const { name, dosage, schedules, expirationDate, qrCodeIdentifier, dosesTaken } = req.body;
 
@@ -84,7 +84,7 @@ router.put('/:id', auth, async (req, res) => {
         if (qrCodeIdentifier) medication.qrCodeIdentifier = qrCodeIdentifier;
         if (dosesTaken) medication.dosesTaken = dosesTaken;
 
-        // Guarda o documento completo
+        // Guarda o documento completo. Este é o método mais seguro.
         const updatedMedication = await medication.save();
 
         res.json(updatedMedication);
