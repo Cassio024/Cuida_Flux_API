@@ -47,7 +47,7 @@ app.use('/', require('./routes/chatbot'));
 
 // ✅ Rota de alarmes
 app.use('/api/alarms', require('./routes/alarms'));
-=======
+
 // --- NOVA ROTA REGISTRADA ---
 app.use('/api/barcode', require('./routes/barcode'));
 // --- FIM DA NOVA ROTA ---

@@ -12,7 +12,8 @@ function enviarNotificacao(token, titulo, corpo) {
         badge: '/icons/favicon.png',
         vibrate: [300, 200, 300, 200, 300]
       },
-      data: { url: '/alarme' }
+      // 🔹 Mantém em sincronia com a rota Flutter
+      data: { url: '/alarm' }
     },
     {
       headers: {
