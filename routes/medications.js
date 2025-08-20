@@ -16,10 +16,7 @@ router.get('/', auth, async (req, res) => {
     }
 });
 
-// --- NOVA ROTA PARA BUSCAR POR QR CODE ---
-// @route   GET api/medications/qr/:identifier
-// @desc    Obter um medicamento pelo seu QR Code customizado
-// @access  Private
+// Rota GET por QR Code (sem alterações)
 router.get('/qr/:identifier', auth, async (req, res) => {
     try {
         const medication = await Medication.findOne({ qrCodeIdentifier: req.params.identifier, user: req.user.id });
@@ -32,12 +29,8 @@ router.get('/qr/:identifier', auth, async (req, res) => {
         res.status(500).send('Erro no Servidor');
     }
 });
-// --- FIM DA NOVA ROTA ---
 
-
-// @route   POST api/medications
-// @desc    Adicionar um novo medicamento
-// @access  Private
+// Rota POST (sem alterações)
 router.post('/', [
     auth,
     [
@@ -50,15 +43,15 @@ router.post('/', [
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
-    // CAMPOS NOVOS ADICIONADOS AQUI
+    
     const { name, dosage, schedules, expirationDate, qrCodeIdentifier } = req.body;
     try {
         const newMedication = new Medication({
             name,
             dosage,
             schedules,
-            expirationDate, // Salva a data de validade
-            qrCodeIdentifier, // Salva o identificador do QR Code
+            expirationDate,
+            qrCodeIdentifier,
             user: req.user.id,
         });
         const medication = await newMedication.save();
@@ -72,16 +65,9 @@ router.post('/', [
 // @route   PUT api/medications/:id
 // @desc    Atualizar um medicamento
 // @access  Private
+// --- LÓGICA DE ATUALIZAÇÃO MELHORADA ---
 router.put('/:id', auth, async (req, res) => {
-    // CAMPOS NOVOS ADICIONADOS AQUI
-    const { name, dosage, schedules, expirationDate, qrCodeIdentifier } = req.body;
-    
-    const medicationFields = {};
-    if (name) medicationFields.name = name;
-    if (dosage) medicationFields.dosage = dosage;
-    if (schedules) medicationFields.schedules = schedules;
-    if (expirationDate) medicationFields.expirationDate = expirationDate; // Atualiza a data de validade
-    if (qrCodeIdentifier) medicationFields.qrCodeIdentifier = qrCodeIdentifier; // Atualiza o QR Code
+    const { name, dosage, schedules, expirationDate, qrCodeIdentifier, dosesTaken } = req.body;
 
     try {
         let medication = await Medication.findById(req.params.id);
@@ -89,14 +75,21 @@ router.put('/:id', auth, async (req, res) => {
         if (medication.user.toString() !== req.user.id) {
             return res.status(401).json({ msg: 'Não autorizado' });
         }
-        medication = await Medication.findByIdAndUpdate(
-            req.params.id,
-            { $set: medicationFields },
-            { new: true }
-        );
-        res.json(medication);
+        
+        // Atualiza os campos de forma explícita
+        if (name) medication.name = name;
+        if (dosage) medication.dosage = dosage;
+        if (schedules) medication.schedules = schedules;
+        if (expirationDate) medication.expirationDate = expirationDate;
+        if (qrCodeIdentifier) medication.qrCodeIdentifier = qrCodeIdentifier;
+        if (dosesTaken) medication.dosesTaken = dosesTaken;
+
+        // Guarda o documento completo
+        const updatedMedication = await medication.save();
+
+        res.json(updatedMedication);
     } catch (err) {
-        console.error(err.message);
+        console.error('Erro na rota PUT:', err.message);
         res.status(500).send('Erro no Servidor');
     }
 });
