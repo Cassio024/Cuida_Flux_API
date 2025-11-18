@@ -2,14 +2,12 @@
 const express = require('express');
 const router = express.Router();
 
-// ⬇️ CORREÇÃO DA IMPORTAÇÃO (RESOLVE O TYPE ERROR) ⬇️
-const MistralModule = require('@mistralai/mistralai'); 
-// Tenta pegar o construtor no valor padrão ou no objeto principal
-const MistralClient = MistralModule.default || MistralModule; 
+// ⬇️ CORREÇÃO DEFINITIVA DA IMPORTAÇÃO (Destruturação) ⬇️
+const { MistralClient } = require('@mistralai/mistralai'); 
 // ⬆️ FIM DA CORREÇÃO ⬆️
 
 // Inicializar cliente Mistral
-const mistral = new MistralClient(process.env.MISTRAL_API_KEY); // ✅ Agora funciona como construtor
+const mistral = new MistralClient(process.env.MISTRAL_API_KEY); 
 
 // Função para chamar a API Mistral
 const getMistralResponse = async (messages) => {
