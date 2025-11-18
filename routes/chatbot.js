@@ -16,7 +16,7 @@ const getGroqResponse = async (messages) => {
     // O sistema prompt já está incluído no array 'messages'
     const chatCompletion = await groq.chat.completions.create({
       messages: messages, // O array já contém o System Prompt e o histórico
-      model: "mixtral-8x7b-32768", // ✅ MODELO ESTÁVEL E ATUALIZADO
+      model: "llama3-70b-8192", // ✅ MODELO ATUALIZADO (Llama 3 70B)
       temperature: 0.7,
       max_tokens: 1024,
       top_p: 1,
@@ -104,7 +104,7 @@ router.post('/ask', applySystemPrompt, async (req, res) => {
       data: {
         response: response,
         timestamp: new Date().toISOString(),
-        model: 'mixtral-8x7b-32768' // ✅ MODELO CORRIGIDO AQUI
+        model: 'llama3-70b-8192' // ✅ MODELO ATUALIZADO AQUI
       }
     });
 
