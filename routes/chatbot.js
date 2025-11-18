@@ -1,134 +1,117 @@
 // routes/chatbot.js
 const express = require('express');
 const router = express.Router();
-const Groq = require('groq-sdk');
+// Usamos o SDK oficial da Mistral
+const MistralClient = require('@mistralai/mistralai'); 
 
-// Inicializar cliente Groq
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+// Inicializar cliente Mistral
+const mistral = new MistralClient(process.env.MISTRAL_API_KEY);
 
-// Função para chamar a API Groq
-const getGroqResponse = async (messages) => {
-  try {
-    console.log('🤖 Enviando mensagem para Groq...');
+// Função para chamar a API Mistral
+const getMistralResponse = async (messages) => {
+    try {
+        console.log('🤖 Enviando mensagem para Mistral AI...');
 
-    // O sistema prompt já está incluído no array 'messages'
-    const chatCompletion = await groq.chat.completions.create({
-      messages: messages, // O array já contém o System Prompt e o histórico
-      model: "llama3-70b-8192", // ✅ MODELO ATUALIZADO (Llama 3 70B)
-      temperature: 0.7,
-      max_tokens: 1024,
-      top_p: 1,
-      stream: false
-    });
+        // O SDK da Mistral usa o método chat()
+        const chatCompletion = await mistral.chat({
+            model: "mistral-tiny", // ✅ Modelo rápido e estável da Mistral
+            messages: messages,
+            temperature: 0.7,
+        });
 
-    console.log('✅ Resposta recebida do Groq');
-    return chatCompletion.choices[0].message.content;
+        console.log('✅ Resposta recebida da Mistral AI');
+        // A resposta da Mistral é um objeto, extraímos o conteúdo do primeiro item
+        return chatCompletion.choices[0].message.content;
 
-  } catch (error) {
-    console.error('❌ Erro ao chamar Groq API:', error);
-
-    // Log detalhado do erro para debug
-    if (error instanceof Groq.APIError) {
-      console.error('API Error Details:');
-      console.error('- Status:', error.status);
+    } catch (error) {
+        console.error('❌ Erro ao chamar Mistral API:', error);
+        throw error;
     }
-
-    throw error;
-  }
 };
 
 // Middleware para incluir o prompt de sistema Vitalog
 const applySystemPrompt = (req, res, next) => {
-  const { message, conversationHistory = [] } = req.body;
+    const { message, conversationHistory = [] } = req.body;
 
-  // 1. Definição do Prompt do Sistema (Vitalog)
-  const systemPrompt = {
-    role: "system",
-    content: `Você é um assistente especializado em saúde e medicamentos chamado Vitalog. 
-                      Suas responsabilidades:
-                      - Fornecer informações gerais sobre medicamentos e saúde
-                      - Explicar interações medicamentosas básicas
-                      - Dar dicas de bem-estar e saúde preventiva
-                      - SEMPRE recomendar consultar um médico ou farmacêutico para questões específicas
-                      - Nunca diagnosticar ou prescrever medicamentos
-                      - Responder de forma clara e amigável em português brasileiro
-                      - Nunca sair tema de remedios
-                      - Sempre garantir a resposta completa
-                      Importante: Você NÃO é um substituto para consulta médica profissional.`
-  };
+    // 1. Definição do Prompt do Sistema (Vitalog)
+    const systemPrompt = {
+        role: "system",
+        content: `Você é um assistente especializado em saúde e medicamentos chamado Vitalog. 
+                      Sua única responsabilidade é fornecer informações claras e amigáveis em português brasileiro sobre medicamentos, interações básicas e bem-estar.
+                      SEMPRE lembre o usuário de consultar um médico ou farmacêutico. NUNCA diagnostique ou prescreva.`
+    };
+    
+    // 2. Prepara histórico de conversa
+    const limitedHistory = conversationHistory.slice(-6); 
+    const messages = [
+        systemPrompt,
+        ...limitedHistory,
+        { role: 'user', content: message.trim() }
+    ];
 
-  // 2. Prepara histórico de conversa (limitar para evitar excesso de tokens)
-  const limitedHistory = conversationHistory.slice(-6);
-  const messages = [
-    systemPrompt,
-    ...limitedHistory,
-    { role: 'user', content: message.trim() }
-  ];
-
-  req.messages = messages;
-  next();
+    req.messages = messages;
+    next();
 };
 
 // Endpoint principal do chatbot
 router.post('/ask', applySystemPrompt, async (req, res) => {
-  try {
-    const { message } = req.body;
+    try {
+        const { message } = req.body;
 
-    // Validação da mensagem
-    if (!message || typeof message !== 'string' || message.trim() === '') {
-      return res.status(400).json({
-        success: false,
-        error: 'Mensagem é obrigatória e deve ser uma string não vazia'
-      });
+        // Validação da mensagem
+        if (!message || typeof message !== 'string' || message.trim() === '') {
+            return res.status(400).json({
+                success: false,
+                error: 'Mensagem é obrigatória e deve ser uma string não vazia'
+            });
+        }
+
+        // Validação da API key
+        if (!process.env.MISTRAL_API_KEY) {
+            console.error('❌ MISTRAL_API_KEY não configurada');
+            return res.status(500).json({
+                success: false,
+                error: 'Configuração da API Mistral Incompleta'
+            });
+        }
+
+        console.log(`📨 Processando mensagem: "${message.substring(0, 50)}..."`);
+
+        // Chamar a API Mistral
+        const response = await getMistralResponse(req.messages);
+
+        // Resposta de sucesso
+        res.json({
+            success: true,
+            data: {
+                response: response,
+                timestamp: new Date().toISOString(),
+                model: 'mistral-tiny'
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Erro no endpoint do chatbot:', error);
+
+        // Tratamento de erros
+        let errorMessage = 'Desculpe, o assistente de saúde está indisponível no momento.';
+        let statusCode = 500;
+        
+        const errString = error.toString().toLowerCase();
+
+        if (errString.includes('unauthorized') || errString.includes('api key')) {
+             errorMessage = 'Erro de autenticação com a API (Chave Mistral Inválida)';
+             statusCode = 401;
+        } else if (errString.includes('rate limit')) {
+             errorMessage = 'Limite de requisições excedido.';
+             statusCode = 429;
+        } 
+
+        res.status(statusCode).json({
+            success: false,
+            error: errorMessage,
+        });
     }
-
-    // Validação da API key
-    if (!process.env.GROQ_API_KEY) {
-      console.error('❌ GROQ_API_KEY não configurada');
-      return res.status(500).json({
-        success: false,
-        error: 'Configuração de API incompleta'
-      });
-    }
-
-    console.log(`📨 Processando mensagem: "${message.substring(0, 50)}..."`);
-
-    // Chamar a API Groq usando o array preparado no middleware
-    const response = await getGroqResponse(req.messages);
-
-    // Resposta de sucesso
-    res.json({
-      success: true,
-      data: {
-        response: response,
-        timestamp: new Date().toISOString(),
-        model: 'llama3-70b-8192' // ✅ MODELO ATUALIZADO AQUI
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Erro no endpoint do chatbot:', error);
-
-    // Tratamento de erros específicos (usando classes Groq nativas)
-    let errorMessage = 'Desculpe, ocorreu um erro interno. Tente novamente.';
-    let statusCode = 500;
-
-    if (error instanceof Groq.AuthenticationError) {
-      errorMessage = 'Erro de autenticação com a API (Chave inválida)';
-      statusCode = 401;
-      console.error('🔑 API Key inválida ou expirada');
-    } else if (error instanceof Groq.RateLimitError) {
-      errorMessage = 'Muitas requisições. Aguarde um momento.';
-      statusCode = 429;
-    }
-
-    res.status(statusCode).json({
-      success: false,
-      error: errorMessage,
-    });
-  }
 });
 
 module.exports = router;
