@@ -10,17 +10,18 @@ connectDB();
 
 const app = express();
 
-// --- INÍCIO DA ATUALIZAÇÃO NECESSÁRIA ---
-// CORS configurado de forma mais simples e direta
+// --- INÍCIO DA ATUALIZAÇÃO (CORS) ---
+// Mudei para liberar geral temporariamente para garantir que o erro suma.
+app.use(cors()); 
+
+// Se no futuro você quiser restringir novamente, use o código abaixo:
+/*
 app.use(cors({
-    origin: [
-        'https://vitalog-ac0ba.web.app', // URL do seu app em produção
-        /http:\/\/localhost:\d+/,      // Expressão regular para permitir qualquer porta em localhost
-        /http:\/\/127\.0\.0\.1:\d+/      // Expressão regular para permitir qualquer porta em 127.0.0.1
-    ],
+    origin: ['https://vitalog-ac0ba.web.app', 'http://localhost:3000'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }));
+*/
 // --- FIM DA ATUALIZAÇÃO ---
 
 // Middleware para interpretar JSON
@@ -33,8 +34,12 @@ app.get('/', (req, res) => res.send('API VitaLog está a funcionar!'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/medications', require('./routes/medications'));
 app.use('/api/interactions', require('./routes/interactions'));
-app.use('/', require('./routes/chatbot'));
 
+// --- ATUALIZAÇÃO DA ROTA DO CHATBOT ---
+// Agora a rota base é /api/chatbot. 
+// O endpoint final será: /api/chatbot/ask
+app.use('/api/chatbot', require('./routes/chatbot'));
+// ---------------------------------------
 
 // ✅ Rota de alarmes
 app.use('/api/alarms', require('./routes/alarms'));
@@ -42,7 +47,6 @@ app.use('/api/alarms', require('./routes/alarms'));
 // --- NOVA ROTA REGISTRADA ---
 app.use('/api/barcode', require('./routes/barcode'));
 // --- FIM DA NOVA ROTA ---
-
 
 // Porta
 const PORT = process.env.PORT || 5000;
